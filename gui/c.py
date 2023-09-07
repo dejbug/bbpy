@@ -39,12 +39,12 @@ class Tournament:
 			+ (4 * len(self.players)) + 1)
 
 t = Tournament()
-t.addPlayer('Dejan Budimir')
-t.addPlayer('Daniel Anton')
-t.addPlayer('Willi Pfeiffer')
-t.addPlayer('Donald Wenzel')
-t.addPlayer('Marcel Iwanicki')
-t.addPlayer('Bruno Sauer')
+t.addPlayer('Rubinstein')
+t.addPlayer('Steinitz')
+t.addPlayer('Benko')
+t.addPlayer('Karpov')
+t.addPlayer('Teichmann')
+t.addPlayer('Lasker')
 t.update()
 # print(t.text)
 
@@ -87,7 +87,7 @@ def main(win):
 
 	names = ['Player 1', 'Player 2']
 
-	t = win.subwin(20, 30, 0, 0)
+	t = win.subwin(20, 30, 5, 3)
 
 	# curses.textpad.rectangle(win, SY-3, 0, SY-1, SX-2)
 	w = win.subwin(1, SX - 6, 0, 5)
