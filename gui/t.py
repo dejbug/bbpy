@@ -1,73 +1,52 @@
 import sys, os, sqlite3
 from tkinter import ttk, Tk, Frame, Entry, Listbox, Label, Button, Canvas
 
-sys.path.insert(0, '.local/database/')
+# FIXME: This needs to work from wherever we execute this script.
+sys.path.insert(0, ('.'))
 import database
 
 # Can't use __file__ because we're freezing this script into an exe.
 THISFILE = os.path.abspath(sys.argv[0])
 
-LOCAL_DATABASE_PATH = '.local/database/springerbk.sqlite'
+LOCAL_DATABASE_PATH = 'springerbk.sqlite'
 
 DEFAULT_FONT = ('sans', 24, 'bold')
 DEFAULT_STATUS_FONT = ('sans', 16, '')
 DEFAULT_MENU_FONT = ('sans', 12, 'bold')
 DEFAULT_GRID_FONT = ('mono', 20, '')
 
-def tabBarGetCurrentTabText():
-	tab = tabBar.tab('current')
-	return tab['text']
+PADDING = 8
 
-def tabBarGetCurrentTabIndex():
-	return tabBar.index("current")
+class TabBar(ttk.Notebook):
+	def __init__(self, parent):
+		ttk.Notebook.__init__(self, parent, takefocus = 0)
+		parent.bind("<Control-Next>", lambda e: self.nextTab())
+		parent.bind("<Control-Prior>", lambda e: self.prevTab())
+		self.bind("<<NotebookTabChanged>>", self.onActiveTabChanged)
+		self.autoFocusItems = []
 
-def cb_root_Escape(e):
-	if tabBarGetCurrentTabText() == 'Players':
-		return
-	root.quit()
+	def getCurrentTabText(self):
+		tab = self.tab('current')
+		return tab['text']
 
-def cb_root_NextTab(e):
-	currentTab = tabBar.index("current")
-	currentTab = (currentTab + 1) % len(tabBar.tabs())
-	tabBar.select(currentTab)
+	def getCurrentTabIndex(self):
+		return self.index("current")
 
-def cb_root_PrevTab(e):
-	currentTab = tabBar.index("current")
-	currentTab = (currentTab - 1) % len(tabBar.tabs())
-	tabBar.select(currentTab)
+	def nextTab(self):
+		currentTab = self.index("current")
+		currentTab = (currentTab + 1) % len(self.tabs())
+		self.select(currentTab)
 
-root = Tk()
-root.title(THISFILE)
-root.geometry('1200x800')
-root.bind('<Escape>', cb_root_Escape)
+	def prevTab(self):
+		currentTab = self.index("current")
+		currentTab = (currentTab - 1) % len(self.tabs())
+		self.select(currentTab)
 
-s = ttk.Style()
-s.theme_create("Style1", parent="alt", settings={
-	"TNotebook": {"configure": {"tabmargins": [2, 5, 2, 0] } },
-	"TNotebook.Tab": {"configure": {"padding": [100, 10],
-	"font" : DEFAULT_MENU_FONT},}
-})
-s.theme_use("Style1")
-
-
-# n = ttk.Notebook(root, style = 'TNotebook')
-tabBar = ttk.Notebook(root, takefocus = 0)
-
-def cb_n_TabChanged(_):
-	# print(tabBar.index("current"))
-	currentTab = tabBar.index("current")
-	# print(e.widget, currentTab)
-	if currentTab == 2:
-		playerAdderFrame.edit.focus_set()
-
-root.bind("<Control-Next>", cb_root_NextTab)
-root.bind("<Control-Prior>", cb_root_PrevTab)
-tabBar.bind(" <<NotebookTabChanged>>", cb_n_TabChanged)
-
-f1 = Frame(tabBar)
-f1.pack(side = 'top', fill = 'x')
-
-padding = 8
+	def onActiveTabChanged(self, e):
+		currentText = self.getCurrentTabText()
+		for text, item in self.autoFocusItems:
+			if currentText == text:
+				item.focus_set()
 
 class CrossTable(Frame):
 	def __init__(self, parent):
@@ -94,7 +73,7 @@ class CrossTable(Frame):
 		width = len(self.data[0])
 
 		self.table = Frame(self)
-		self.table.pack(anchor = 'w', padx = padding, pady = padding)
+		self.table.pack(anchor = 'w', padx = PADDING, pady = PADDING)
 
 		for i in range(height): #Rows
 			for j in range(width): #Columns
@@ -103,24 +82,12 @@ class CrossTable(Frame):
 				b = Label(self.table, text = text,
 					font = DEFAULT_GRID_FONT,
 					relief = "sunken", cursor = cursor, anchor = "center",
-					padx = padding, pady = padding,
+					padx = PADDING, pady = PADDING,
 					background = 'white', borderwidth = 3)
 				b.grid(row=i, column=j, sticky = 'n e w s')
 
 		self.table.rowconfigure('all', minsize = 50)
 		self.table.columnconfigure('all', minsize = 50)
-
-f2 = Frame(tabBar)
-f2.pack(side = 'top', fill = 'x')
-
-canvas = Canvas(f2, width = 1200, height = 800)
-canvas.grid(column=0, row=0, sticky='n e w s')
-canvas.create_line((0, 0, 1000, 1000))
-
-class PlayerList(Listbox):
-	def __init__(self, parent):
-		Listbox.__init__(self, parent)
-
 
 class SuggestionPopup:
 
@@ -151,7 +118,7 @@ class SuggestionPopup:
 		self.list = Listbox(self.listFrame, font = DEFAULT_FONT,
 			selectmode = "single", bg = "white", takefocus = 0,
 			relief = "flat")
-		self.list.pack(anchor = 'center', padx = padding, pady = padding)
+		self.list.pack(anchor = 'center', padx = PADDING, pady = PADDING)
 
 		for name in names:
 			self.list.insert('end', name['name'])
@@ -193,16 +160,18 @@ class StatusBar(Frame):
 		self.pack(side = 'bottom', fill = 'x')
 
 		self.main = Label(self, font = DEFAULT_STATUS_FONT)
-		self.main.pack(side = 'left', padx = padding)
+		self.main.pack(side = 'left', padx = PADDING)
 
 	def setMainText(self, text):
 		self.main['text'] = text
 
+class PlayerList(Listbox):
+	def __init__(self, parent):
+		Listbox.__init__(self, parent, bg = 'hotpink')
 
 class PlayerAdderFrame(Frame):
 	def __init__(self, parent):
 		Frame.__init__(self, parent)
-		# self.pack(side = 'top', fill = 'both', expand = 1)
 		self.pack()
 
 		# self.button = Button(self, text = 'add', takefocus = False, font = DEFAULT_FONT)
@@ -210,7 +179,7 @@ class PlayerAdderFrame(Frame):
 
 		self.edit = Entry(self, font = DEFAULT_FONT, bg = 'white')
 		# se.bind('<Return>', cb_se_Return)
-		self.edit.pack(side = 'top', fill = 'x', padx = padding, pady = padding)
+		self.edit.pack(side = 'top', fill = 'x', padx = PADDING, pady = PADDING)
 
 		self.list = PlayerList(self)
 
@@ -227,21 +196,26 @@ class PlayerAdderFrame(Frame):
 
 		self.writeDatabasePlayerCountToStatusBar()
 
-	def writeDatabasePlayerCountToStatusBar(self):
-		playerCount = 0
-		with database.connect(LOCAL_DATABASE_PATH) as db:
-			db.row_factory = None
-			r = db.execute('SELECT count(*) FROM names')
-			playerCount = r.fetchone()[0]
-		self.status.setMainText(f'There are {playerCount} players in the database.')
-
 	def onEditEscape(self, e):
-		if self.getEditText():
-			self.clearEdit()
-		elif self.popup.shown():
+		if self.popup.shown():
 			self.popup.hide()
+		elif self.getEditText():
+			self.clearEdit()
 		else:
-			root.quit()
+			# root.quit()
+			self.master.quit()
+
+	def onEditTab(self, e):
+		self.popup.hide()
+		with database.connect(LOCAL_DATABASE_PATH) as db:
+			text = self.edit.get()
+			names = database.findName(db, text)
+		if names:
+			if len(names) == 1:
+				self.setEditText(names[0]['name'])
+			else:
+				self.popup.show(names)
+		self.edit.focus_set()
 
 	def commmitSuggestion(self):
 		if self.popup.shown():
@@ -252,20 +226,6 @@ class PlayerAdderFrame(Frame):
 				if name:
 					self.setEditText(name)
 					return
-
-	def onEditTab(self, e):
-		self.popup.hide()
-		text = self.edit.get()
-		self.edit.delete(0, "end")
-		# print(text)
-		with database.connect(LOCAL_DATABASE_PATH) as db:
-			names = database.findName(db, text)
-		if names:
-			if len(names) == 1:
-				self.setEditText(names[0]['name'])
-			else:
-				self.popup.show(names)
-		self.edit.focus_set()
 
 	def getEditText(self):
 		return self.edit.get()
@@ -295,30 +255,63 @@ class PlayerAdderFrame(Frame):
 		sel = (sel + 1) % count
 		self.popup.select(sel)
 
-# def popup_bonus(parent):
-# 	import tkinter
-# 	win = tkinter.Toplevel()
-# 	win.transient(parent)
-# 	win.attributes("-topmost", True)
-# 	win.wm_title("Window")
+	def writeDatabasePlayerCountToStatusBar(self):
+		playerCount = 0
+		with database.connect(LOCAL_DATABASE_PATH) as db:
+			db.row_factory = None
+			r = db.execute('SELECT count(*) FROM names')
+			playerCount = r.fetchone()[0]
+		self.status.setMainText(f'There are {playerCount} players in the database.')
 
-# 	l = tk.Label(win, text="Input")
-# 	l.grid(row=0, column=0)
+def main():
+	root = Tk()
+	root.title(THISFILE)
+	root.geometry('1200x800')
 
-# 	b = ttk.Button(win, text="Okay", command=win.destroy)
-# 	b.grid(row=1, column=0)
+	s = ttk.Style()
+	s.theme_create("Style1", parent="alt", settings={
+		"TNotebook": {"configure": {"tabmargins": [2, 5, 2, 0] } },
+		"TNotebook.Tab": {"configure": {"padding": [100, 10],
+		"font" : DEFAULT_MENU_FONT},}
+	})
+	s.theme_use("Style1")
 
-playerAdderFrame = PlayerAdderFrame(root)
-crossTable = CrossTable(root)
+	tabBar = TabBar(root)
 
-tabBar.add(playerAdderFrame, text = 'Players')
-tabBar.add(crossTable, text = 'Table')
-tabBar.add(f2, text = 'Graphs')
-tabBar.pack(side = 'top', fill = 'both', expand = 1)
+	def cb_root_Escape(e):
+		if tabBar.getCurrentTabText() == 'Players':
+			return
+		root.quit()
 
-playerAdderFrame.edit.focus_set()
+	root.bind('<Escape>', cb_root_Escape)
 
-# import tkinter.font
-# print(tkinter.font.families(root))
 
-root.mainloop()
+	f1 = Frame(tabBar)
+	f1.pack(side = 'top', fill = 'x')
+
+	f2 = Frame(tabBar)
+	f2.pack(side = 'top', fill = 'x')
+
+	canvas = Canvas(f2, width = 1200, height = 800)
+	canvas.grid(column=0, row=0, sticky='n e w s')
+	canvas.create_line((0, 0, 1000, 1000))
+
+	playerAdderFrame = PlayerAdderFrame(root)
+	crossTable = CrossTable(root)
+
+	tabBar.add(playerAdderFrame, text = 'Players')
+	tabBar.add(crossTable, text = 'Table')
+	tabBar.add(f2, text = 'Graphs')
+	tabBar.pack(side = 'top', fill = 'both', expand = 1)
+
+	tabBar.autoFocusItems.append(('Players', playerAdderFrame.edit))
+
+	playerAdderFrame.edit.focus_set()
+
+	# import tkinter.font
+	# print(tkinter.font.families(root))
+
+	root.mainloop()
+
+if __name__ == '__main__':
+	sys.exit(main())
