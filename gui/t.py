@@ -52,42 +52,84 @@ class CrossTable(Frame):
 	def __init__(self, parent):
 		Frame.__init__(self, parent)
 		self.pack()
+		self.grid = None
 
-		self.data = [
-			['#' , 'Name',		'1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', 'Punkte', 'Platz'],
-			['1' , 'Aronian',	 '',  '',  '',  '',  '',  '',  '',  '',  '',   '',   '',   '',      '0',     '1'],
-			['2' , 'Botvinnik',	 '',  '',  '',  '',  '',  '',  '',  '',  '',   '',   '',   '',      '0',     '1'],
-			['3' , 'Carlsen',	 '',  '',  '',  '',  '',  '',  '',  '',  '',   '',   '',   '',      '0',     '1'],
-			['4' , 'Ding',		 '',  '',  '',  '',  '',  '',  '',  '',  '',   '',   '',   '',      '0',     '1'],
-			['5' , 'Euwe',		 '',  '',  '',  '',  '',  '',  '',  '',  '',   '',   '',   '',      '0',     '1'],
-			['6' , 'Fischer',	 '',  '',  '',  '',  '',  '',  '',  '',  '',   '',   '',   '',      '0',     '1'],
-			['7' , 'Gligorić',	 '',  '',  '',  '',  '',  '',  '',  '',  '',   '',   '',   '',      '0',     '1'],
-			['8' , 'Hou',		 '',  '',  '',  '',  '',  '',  '',  '',  '',   '',   '',   '',      '0',     '1'],
-			['9' , 'Ivanchuk',	 '',  '',  '',  '',  '',  '',  '',  '',  '',   '',   '',   '',      '0',     '1'],
-			['10', 'Jobava',	 '',  '',  '',  '',  '',  '',  '',  '',  '',   '',   '',   '',      '0',     '1'],
-			['11', 'Kramnik',	 '',  '',  '',  '',  '',  '',  '',  '',  '',   '',   '',   '',      '0',     '1'],
-			['12', 'Larsen',	 '',  '',  '',  '',  '',  '',  '',  '',  '',   '',   '',   '',      '0',     '1'],
-		]
+		self.createGrid(7)
+		self.setCellText(1, 1, 'Anandarandanand')
+		self.setCellText(2, 1, 'Bodkinick')
+		self.setCellText(3, 1, 'Carlsbadson')
+		self.setCellText(4, 1, 'Ding')
+		self.setCellText(5, 1, 'Euwe')
+		self.setCellText(6, 1, 'Fischer')
+		self.setCellText(7, 1, 'Grischuck')
 
-		height = len(self.data)
-		width = len(self.data[0])
+	def onCellEvent(self, e):
+		row, col, text, x, y, w, h = self.getCellDataFromWidget(e.widget)
+		print(row, col, text, x, y, w, h)
+		# e.widget.focus_set()
 
+	def createGrid(self, playerCount):
+		self.destroyGrid()
+		rows = playerCount + 1
+		cols = playerCount + 4
+		self.grid = [[None for i in range(cols)] for j in range(rows)]
 		self.table = Frame(self)
 		self.table.pack(anchor = 'w', padx = PADDING, pady = PADDING)
 
-		for i in range(height): #Rows
-			for j in range(width): #Columns
-				cursor = 'X_cursor' if i == j - 1 else 'hand2'
-				text = 'x' if i == j - 1 else self.data[i][j]
-				b = Label(self.table, text = text,
-					font = DEFAULT_GRID_FONT,
-					relief = "sunken", cursor = cursor, anchor = "center",
-					padx = PADDING, pady = PADDING,
-					background = 'white', borderwidth = 3)
-				b.grid(row=i, column=j, sticky = 'n e w s')
+		self.createCellAt(0, 0, '#')
+		self.createCellAt(0, 1, 'Name')
+		for col in range(playerCount):
+			self.createCellAt(0, 2 + col, f'{col + 1}')
+		self.createCellAt(0, 2 + playerCount + 0, 'Punkte')
+		self.createCellAt(0, 2 + playerCount + 1, 'Platz')
+		for row in range(1, playerCount + 1):
+			self.createCellAt(row, 0, f'{row}')
+			self.createCellAt(row, 1, '')
+			for col in range(playerCount):
+				cursor = 'X_cursor' if row > 0 and row == col + 1 else 'hand2'
+				text = 'x' if row == col + 1 else ''
+				self.createCellAt(row, 2 + col, text, cursor)
+			self.createCellAt(row, 2 + playerCount + 0, '0')
+			self.createCellAt(row, 2 + playerCount + 1, '1')
 
 		self.table.rowconfigure('all', minsize = 50)
 		self.table.columnconfigure('all', minsize = 50)
+
+	def destroyGrid(self):
+		if self.grid:
+			for row in self.grid:
+				for cell in row:
+					print(self.getCellDataFromWidget(cell))
+					cell.destroy()
+			self.grid = None
+
+	def createCellAt(self, row, col, text = '', cursor = 'hand2'):
+		cell = Label(self.table, text = text,
+			font = DEFAULT_GRID_FONT,
+			relief = "sunken", cursor = cursor, anchor = "center",
+			padx = PADDING, pady = PADDING,
+			background = 'white', borderwidth = 3)
+		cell.grid(row=row, column=col, sticky = 'n e w s')
+		cell.bind('<Button>', self.onCellEvent)
+		# cell.bind('<KeyPress>', self.onCellEvent)
+		self.grid[row][col] = cell
+
+	def setCellText(self, row, col, text):
+		if self.grid:
+			self.grid[row][col]['text'] = text
+
+	def getCellDataFromWidget(self, widget):
+		assert widget.widgetName == 'label'
+		i = widget.grid_info()
+		row = i['row']
+		col = i['column']
+		text = widget.config('text')
+		x = widget.winfo_x()
+		y = widget.winfo_y()
+		w = widget.winfo_width()
+		h = widget.winfo_height()
+		# print(widget.winfo_geometry())
+		return row, col, text, x, y, w, h
 
 class SuggestionPopup:
 
@@ -167,7 +209,27 @@ class StatusBar(Frame):
 
 class PlayerList(Listbox):
 	def __init__(self, parent):
-		Listbox.__init__(self, parent, bg = 'hotpink')
+		Listbox.__init__(self, parent, bg = 'white', takefocus = False,
+			font = DEFAULT_GRID_FONT, relief = 'flat',
+			selectmode = 'browse', activestyle = 'dotbox',
+			borderwidth = 0, highlightthickness = 3,
+			highlightbackground = 'white', highlightcolor = 'white',
+			selectforeground = 'red', selectbackground = 'white',
+			selectborderwidth = 1)
+		self.pack(side = 'top', fill = 'both', expand = 1, padx = PADDING)
+		self.bind("<BackSpace>", self.onBackSpace)
+
+	def onBackSpace(self, e):
+		cur = self.index('active')
+		self.delete(cur)
+
+	def addRow(self, text):
+		self.insert('end', text)
+
+	def loadNames(self):
+		with database.connect(LOCAL_DATABASE_PATH) as db:
+			for name in database.getNames(db):
+				self.addRow(f"{name['id']:2}: {name['name']}")
 
 class PlayerAdderFrame(Frame):
 	def __init__(self, parent):
@@ -181,20 +243,30 @@ class PlayerAdderFrame(Frame):
 		# se.bind('<Return>', cb_se_Return)
 		self.edit.pack(side = 'top', fill = 'x', padx = PADDING, pady = PADDING)
 
-		self.list = PlayerList(self)
+		padder = Frame(self, background = 'white')
+		self.playerList = PlayerList(padder)
+		padder.pack(side = 'top', fill = 'both', expand = 1, padx = PADDING)
 
 		self.status = StatusBar(self)
-
 		self.popup = SuggestionPopup(self, self.edit)
 
 		self.edit.bind("<Return>", lambda e: self.commmitSuggestion())
 		self.edit.bind("<Escape>", self.onEditEscape)
 		self.edit.bind("<Tab>", self.onEditTab)
-		self.edit.bind("<Up>", lambda e: self.selectPrev())
-		self.edit.bind("<Down>", lambda e: self.selectNext())
+		self.edit.bind("<Up>", self.onUpArrow)
+		self.edit.bind("<Down>", self.onDownArrow)
 		# self.edit.bind("<KeyPress>", self.onKeyPress)
+		self.edit.bind("<Next>", self.onEditPageDown)
+		self.playerList.bind("<Prior>", self.onPlayerListPageUp)
 
 		self.writeDatabasePlayerCountToStatusBar()
+
+	def onEditPageDown(self, e):
+		self.popup.hide()
+		self.playerList.focus_set()
+
+	def onPlayerListPageUp(self, e):
+		self.edit.focus_set()
 
 	def onEditEscape(self, e):
 		if self.popup.shown():
@@ -217,6 +289,14 @@ class PlayerAdderFrame(Frame):
 				self.popup.show(names)
 		self.edit.focus_set()
 
+	def onUpArrow(self, e):
+		if self.popup.shown():
+			self.selectPrev()
+
+	def onDownArrow(self, e):
+		if self.popup.shown():
+			self.selectNext()
+
 	def commmitSuggestion(self):
 		if self.popup.shown():
 			sel = self.popup.selection()
@@ -226,6 +306,11 @@ class PlayerAdderFrame(Frame):
 				if name:
 					self.setEditText(name)
 					return
+		else:
+			text = self.getEditText()
+			if text:
+				self.playerList.addRow(text)
+				self.clearEdit()
 
 	def getEditText(self):
 		return self.edit.get()
@@ -278,38 +363,36 @@ def main():
 
 	tabBar = TabBar(root)
 
-	def cb_root_Escape(e):
-		if tabBar.getCurrentTabText() == 'Players':
-			return
-		root.quit()
+	playerAdderFrame = PlayerAdderFrame(root)
+	tabBar.add(playerAdderFrame, text = 'Players')
 
-	root.bind('<Escape>', cb_root_Escape)
+	crossTable = CrossTable(root)
+	tabBar.add(crossTable, text = 'Table')
 
+	graphs = Frame(tabBar)
+	canvas = Canvas(graphs, width = 1200, height = 800)
+	# canvas.pack(side = 'top', fill = 'both', expand = 1)
+	canvas.pack()
+	tabBar.add(graphs, text = 'Graphs')
 
-	f1 = Frame(tabBar)
-	f1.pack(side = 'top', fill = 'x')
-
-	f2 = Frame(tabBar)
-	f2.pack(side = 'top', fill = 'x')
-
-	canvas = Canvas(f2, width = 1200, height = 800)
-	canvas.grid(column=0, row=0, sticky='n e w s')
 	canvas.create_line((0, 0, 1000, 1000))
 
-	playerAdderFrame = PlayerAdderFrame(root)
-	crossTable = CrossTable(root)
-
-	tabBar.add(playerAdderFrame, text = 'Players')
-	tabBar.add(crossTable, text = 'Table')
-	tabBar.add(f2, text = 'Graphs')
-	tabBar.pack(side = 'top', fill = 'both', expand = 1)
-
 	tabBar.autoFocusItems.append(('Players', playerAdderFrame.edit))
-
-	playerAdderFrame.edit.focus_set()
+	tabBar.pack(side = 'top', fill = 'both', expand = 1)
 
 	# import tkinter.font
 	# print(tkinter.font.families(root))
+
+	def onEscape(e):
+		if tabBar.getCurrentTabText() == 'Players':
+			widget = playerAdderFrame.focus_get()
+			if widget.widgetName == 'entry':
+				return
+		root.quit()
+
+	root.bind('<Escape>', onEscape)
+
+	playerAdderFrame.edit.focus_set()
 
 	root.mainloop()
 

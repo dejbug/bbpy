@@ -8,6 +8,9 @@ from Result import Result
 
 BBP = '.local/bin/bbpPairings-v5.0.1/bbpPairings.exe'
 
+DEFAULT_TEMP_PATH = '.local/tmp/'
+PLAYERS_SAMPLE_PATH = '.local/sample.players'
+
 class Error(Exception): pass
 class PairingExeError(Error): pass
 
@@ -22,7 +25,7 @@ def PlayerFactory(tournament, sex = '', title = '', federation = ''):
 	return _
 
 def getNextPairingsText(tournament):
-	file, tmpPath  = tempfile.mkstemp(suffix = '.trf', dir = '.local/tmp/', text = True)
+	file, tmpPath  = tempfile.mkstemp(suffix = '.trf', dir = DEFAULT_TEMP_PATH, text = True)
 	os.write(file, tournament.toTrf().encode('utf8'))
 	os.close(file)
 	p = subprocess.run([os.path.abspath(BBP), '--dutch', tmpPath, '-p'], capture_output = True)
@@ -62,17 +65,19 @@ def iterPlayersFromPlayersFile(path, playerFactory = Player):
 if __name__ == '__main__':
 	tournament = Tournament(maxRounds = 5)
 	playerFactory = PlayerFactory(tournament, Player.MALE, Player.UNTITLED, 'GER')
-	for player in iterPlayersFromPlayersFile('.local/sample.players', playerFactory):
+	for player in iterPlayersFromPlayersFile(PLAYERS_SAMPLE_PATH, playerFactory):
 		tournament.addPlayer(player)
 	print(tournament.toTrf())
-	tournament.updateInitialRanking()
-	print(tournament.toTrf())
+	# tournament.updateInitialRanking()
+	# print(tournament.toTrf())
 
 	pairings = list(getNextPairings(tournament))
 	# print(pairings); print()
 
 	pairings[0].setResult(Result.WIN)
+	pairings[1].setResult(Result.LOSS)
 	pairings[2].setResult(Result.WIN)
+	pairings[3].setResult(Result.LOSS)
 	pairings[4].setResult(Result.WIN)
 	pairings[5].setResult(Result.DRAW)
 	pairings[6].setResult(Result.UBYE)
